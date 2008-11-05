@@ -35,7 +35,10 @@ module Delayed
           say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
         end
 
-        break if $exit
+        if $exit
+          Delayed::Job.clear_locks!
+          break
+        end
       end
     end
     
