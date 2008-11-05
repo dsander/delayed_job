@@ -10,6 +10,11 @@ module Delayed
 
     def start
       say "*** Starting job worker #{Delayed::Job.worker_name}"
+      
+      file = File.new("Worker_#{Process.pid}.pid", "w+")
+      file.puts "Rake Task Started #{Time.now}"
+      file.puts "PID: #{Process.pid}"
+      file.close      
 
       trap('TERM') { say 'Exiting...'; $exit = true }
       trap('INT')  { say 'Exiting...'; $exit = true }
