@@ -1,0 +1,70 @@
+#!/usr/bin/env ruby
+#
+#worker_startup_script  This resides in /etc/init.d
+#
+#chkconfig:   2345 80 20
+#description: A startup script to automatically start workers for delayed_job
+APP_NAME = 'worker_startup_script'
+
+unless ['start', 'stop', 'restart'].include? ARGV.first
+  puts "Usage: #{APP_NAME} start|stop|restart 2 (for 2 workers - start only)"
+  exit
+end
+
+app_dir = '~/apps/RISForge'
+require app_dir + '/config/environment'
+@filenames = []
+
+case ARGV.last
+  when /[0-9]/
+    number_of_workers = ARGV.last.to_i
+  else
+    number_of_workers = 1
+end
+
+case ARGV.first
+  when 'start':
+    if number_of_workers > 1
+      puts "Starting #{number_of_workers} workers..."
+      number_of_workers.times do 
+        system "/usr/bin/ruby /usr/bin/rake jobs:work &"
+      end
+    else
+      puts "Starting 1 worker..."
+      system "/usr/bin/ruby /usr/bin/rake jobs:work &"
+    end
+  
+  when 'stop': 
+    Dir.foreach(RAILS_ROOT) do |entry|
+      if entry.include? ".pid"
+        @filenames << entry
+      end
+    end
+    puts "Found #{@filenames.length}"
+    puts "Stopping workers..."     
+    @filenames.each do |filename|
+      pid = filename.scan(/[0-9]*/).to_s.to_i
+      system "kill -9 #{pid}"
+      FileUtils.remove_file("#{RAILS_ROOT}/#{filename}")
+    end
+    
+  when 'restart':
+    puts "Restarting workers..."
+    Dir.foreach(RAILS_ROOT) do |entry|
+      if entry.include? ".pid"
+        @filenames << entry
+      end
+    end
+    puts "Found #{@filenames.length}"
+    @filenames.each do |filename|
+      pid = filename.scan(/[0-9]*/).to_s.to_i
+      system "kill -9 #{pid}"
+      FileUtils.remove_file("#{RAILS_ROOT}/#{filename}")
+    end
+    puts "Starting #{@filenames.length}"
+    @filenames.each do 
+      system "/usr/bin/ruby /usr/bin/rake jobs:work &"
+    end
+end
+
+

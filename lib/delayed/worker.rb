@@ -11,7 +11,7 @@ module Delayed
     def start
       say "*** Starting job worker #{Delayed::Job.worker_name}"
       
-      file = File.new("Worker_#{Process.pid}.pid", "w+")
+      file = File.new("#{RAILS_ROOT}/Worker_#{Process.pid}.pid", "w+")
       file.puts "Rake Task Started #{Time.now}"
       file.puts "PID: #{Process.pid}"
       file.close      
