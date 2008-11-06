@@ -4,6 +4,7 @@ module Delayed
 
     def initialize(options={})
       @quiet = options[:quiet]
+      @logger = options[:logger] ? options[:logger] : RAILS_DEFAULT_LOGGER
       Delayed::Job.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       Delayed::Job.max_priority = options[:max_priority] if options.has_key?(:max_priority)
     end                                                                          
@@ -28,7 +29,10 @@ module Delayed
 
         count = result.sum
 
-        break if $exit
+        if $exit
+          Delayed::Job.clear_locks!
+          break
+        end
 
         if count.zero?
           sleep(SLEEP)
@@ -36,13 +40,16 @@ module Delayed
           say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
         end
 
-        break if $exit
+        if $exit
+          Delayed::Job.clear_locks!
+          break
+        end
       end
     end
     
     def say(text)
       puts text unless @quiet
-      RAILS_DEFAULT_LOGGER.info text
+      @logger.info text
     end
 
   end
