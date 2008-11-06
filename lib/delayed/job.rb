@@ -35,6 +35,7 @@ module Delayed
 
     def payload_object=(object)
       self['handler'] = object.to_yaml
+      self['description'] = object.respond_to?(:description) ? object.description : ''
     end
 
     def reschedule(message, time = nil)
@@ -162,6 +163,7 @@ module Delayed
 
         job = self.reserve do |j| 
           begin
+            puts "job: #{j.description}"
             j.perform
             success += 1
           rescue
