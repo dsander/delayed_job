@@ -29,7 +29,9 @@ The library evolves around a delayed_jobs table which looks as follows:
     table.string   :last_error
     table.datetime :run_at
     table.datetime :locked_at
+    table.datetime :failed_at
     table.string   :locked_by
+    table.string   :description
     table.timestamps
   end
   
@@ -38,13 +40,13 @@ h2. Usage
 Jobs are simple ruby objects with a method called perform. Any object which responds to perform can be stuffed into the jobs table.
 Job objects are serialized to yaml so that they can later be resurrected by the job runner. 
 
-  class NewsletterJob < Struct.new(:text, :emails)
+  class NewsletterJob < Struct.new(:description)
     def perform
-      emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+      puts "Hello World!" #Code here
     end    
   end  
   
-  Delayed::Job.enqueue NewsletterJob.new('lorem ipsum...', Customers.find(:all).collect(&:email))
+  Delayed::Job.enqueue NewsletterJob.new("Here is the description.")
            
 There is also a second way to get jobs in the queue: send_later. 
 
