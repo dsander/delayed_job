@@ -11,8 +11,11 @@ unless ['start', 'stop', 'restart'].include? ARGV.first
   exit
 end
 
-app_dir = '~/apps/RISForge'
-require app_dir + '/config/environment'
+app_dir = '/home/vmarchive/apps/RISForge'
+require(File.join(app_dir, 'config', 'boot'))
+
+
+
 @filenames = []
 
 case ARGV.last
@@ -27,11 +30,11 @@ case ARGV.first
     if number_of_workers > 1
       puts "Starting #{number_of_workers} workers..."
       number_of_workers.times do 
-        system "/usr/bin/ruby /usr/bin/rake jobs:work &"
+        system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work &"
       end
     else
       puts "Starting 1 worker..."
-      system "/usr/bin/ruby /usr/bin/rake jobs:work &"
+      system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work &"
     end
   
   when 'stop': 
@@ -63,7 +66,7 @@ case ARGV.first
     end
     puts "Starting #{@filenames.length}"
     @filenames.each do 
-      system "/usr/bin/ruby /usr/bin/rake jobs:work &"
+      system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work &"
     end
 end
 
