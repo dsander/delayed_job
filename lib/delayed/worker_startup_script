@@ -38,7 +38,7 @@ case ARGV.first
     end
   
   when 'stop': 
-    Dir.foreach(RAILS_ROOT) do |entry|
+    Dir.foreach("#{RAILS_ROOT}/tmp/pids/") do |entry|
       if entry.include? ".pid"
         @filenames << entry
       end
@@ -47,13 +47,13 @@ case ARGV.first
     puts "Stopping workers..."     
     @filenames.each do |filename|
       pid = filename.scan(/[0-9]*/).to_s.to_i
-      system "kill -9 #{pid}"
-      FileUtils.remove_file("#{RAILS_ROOT}/#{filename}")
+      system "kill -TERM #{pid}"
+      FileUtils.remove_file("#{RAILS_ROOT}/tmp/pids/#{filename}")
     end
     
   when 'restart':
     puts "Restarting workers..."
-    Dir.foreach(RAILS_ROOT) do |entry|
+    Dir.foreach("#{RAILS_ROOT}/tmp/pids/") do |entry|
       if entry.include? ".pid"
         @filenames << entry
       end
@@ -61,8 +61,8 @@ case ARGV.first
     puts "Found #{@filenames.length}"
     @filenames.each do |filename|
       pid = filename.scan(/[0-9]*/).to_s.to_i
-      system "kill -9 #{pid}"
-      FileUtils.remove_file("#{RAILS_ROOT}/#{filename}")
+      system "kill -TERM #{pid}"
+      FileUtils.remove_file("#{RAILS_ROOT}/tmp/pids/#{filename}")
     end
     puts "Starting #{@filenames.length}"
     @filenames.each do 
