@@ -13,8 +13,8 @@ end
 
 app_dir = '/home/vmarchive/apps/RISForge'
 require(File.join(app_dir, 'config', 'boot'))
-
-
+log = File.open("#{RAILS_ROOT}/log/rake.log", "w+")
+     
 
 @filenames = []
 
@@ -28,13 +28,13 @@ end
 case ARGV.first
   when 'start':
     if number_of_workers > 1
-      puts "Starting #{number_of_workers} workers..."
+      log.puts "Starting #{number_of_workers} workers..."
       number_of_workers.times do 
-        system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work &"
+        system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work --trace 2>&1 >> #{RAILS_ROOT}/log/rake.log &"
       end
     else
-      puts "Starting 1 worker..."
-      system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work &"
+      log.puts "Starting 1 worker..."
+      system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work --trace 2>&1 >> #{RAILS_ROOT}/log/rake.log &"
     end
   
   when 'stop': 
@@ -43,8 +43,8 @@ case ARGV.first
         @filenames << entry
       end
     end
-    puts "Found #{@filenames.length}"
-    puts "Stopping workers..."     
+    log.puts "Found #{@filenames.length}"
+    log.puts "Stopping workers..."     
     @filenames.each do |filename|
       pid = filename.scan(/[0-9]*/).to_s.to_i
       system "kill -TERM #{pid}"
@@ -52,22 +52,23 @@ case ARGV.first
     end
     
   when 'restart':
-    puts "Restarting workers..."
+    log.puts "Restarting workers..."
     Dir.foreach("#{RAILS_ROOT}/tmp/pids/") do |entry|
       if entry.include? ".pid"
         @filenames << entry
       end
     end
-    puts "Found #{@filenames.length}"
+    log.puts "Found #{@filenames.length}"
     @filenames.each do |filename|
       pid = filename.scan(/[0-9]*/).to_s.to_i
       system "kill -TERM #{pid}"
       FileUtils.remove_file("#{RAILS_ROOT}/tmp/pids/#{filename}")
     end
-    puts "Starting #{@filenames.length}"
+    log.puts "Starting #{@filenames.length}"
     @filenames.each do 
-      system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work &"
+      system "/usr/bin/ruby /usr/bin/rake -f #{app_dir}/Rakefile jobs:work --trace 2>&1 >> #{RAILS_ROOT}/log/rake.log &"
     end
+log.close
 end
 
 
