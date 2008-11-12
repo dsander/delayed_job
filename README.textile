@@ -32,8 +32,8 @@ The library evolves around a delayed_jobs table which looks as follows:
     table.datetime :failed_at
     table.string   :locked_by
     table.string   :description
-    t.boolean  "recur",       :default => false
-    t.integer  "period",      :limit => 11    
+    table.boolean  "recur",    :default => false
+    table.integer  "period",   :limit => 11    
     table.timestamps
   end
   
