@@ -1,6 +1,6 @@
 h1. Delayed::Job
 
-Delated_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. 
+Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. 
 
 It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks. Amongst those tasks are:
 
@@ -53,8 +53,11 @@ Job objects are serialized to yaml so that they can later be resurrected by the 
 There is also a second way to get jobs in the queue: send_later. 
 
   
-  BatchImporter.new(Shop.find(1)).send_later(:import_massive_csv, massive_csv)                                                    
+  BatchImporter.new(Shop.find(1)).send_later(:import_massive_csv, description, massive_csv)                                                    
+
+And another way: recur_later.  This schedules a recurring job to start at time and repeat every period.  
   
+  BatchImporter.new(Shop.find(1)).recur_later(:import_massive_csv, description, time, period, priority, massive_csv)
 
 This will simply create a Delayed::PerformableMethod job in the jobs table which serializes all the parameters you pass to it. There are some special smarts for active record objects
 which are stored as their text representation and loaded from the database fresh when the job is actually run later.

@@ -125,6 +125,8 @@ module Delayed
             if job.recur == true
               run = job.run_at + job.period
               job.update_attributes(:run_at => run)
+              job.unlock
+              job.save
             else
               job.destroy
             end
