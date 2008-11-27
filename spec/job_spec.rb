@@ -69,8 +69,7 @@ describe Delayed::Job do
 
     SimpleJob.runs.should == 1
   end
-                     
-                     
+
   it "should work with jobs in modules" do
     M::ModuleJob.runs.should == 0
 
@@ -79,7 +78,7 @@ describe Delayed::Job do
 
     M::ModuleJob.runs.should == 1
   end
-                   
+
   it "should re-schedule by about 1 second at first and increment this more and more minutes when it fails to execute properly" do
     Delayed::Job.enqueue ErrorJob.new
     Delayed::Job.work_off(1)
@@ -134,7 +133,7 @@ describe Delayed::Job do
     job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
     lambda { job.payload_object.perform }.should raise_error(Delayed::DeserializationError)
   end
-  
+
   it "should be failed if it failed more than MAX_ATTEMPTS times and we don't want to destroy jobs" do
     default = Delayed::Job.destroy_failed_jobs
     Delayed::Job.destroy_failed_jobs = false
@@ -231,7 +230,9 @@ describe Delayed::Job do
     before(:each) do
       Delayed::Job.max_priority = nil
       Delayed::Job.min_priority = nil      
+
     end
+
   
     it "should only work_off jobs that are >= min_priority" do
       Delayed::Job.min_priority = -5

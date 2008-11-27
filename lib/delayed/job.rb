@@ -9,21 +9,22 @@ module Delayed
     MAX_RUN_TIME = 4.hours
     set_table_name :delayed_jobs
 
-    # By default failed jobs are destroyed after too many attempts.
-    # If you want to keep them around (perhaps to inspect the reason
-    # for the failure), set this to false.
-    cattr_accessor :destroy_failed_jobs
-    self.destroy_failed_jobs = true
-
+    cattr_accessor :worker_name, :min_priority, :max_priority, :destroy_failed_jobs
     # Every worker has a unique name which by default is the pid of the process. 
     # There are some advantages to overriding this with something which survives worker retarts: 
     # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.
-    cattr_accessor :worker_name
     self.worker_name = "host:#{Socket.gethostname} pid:#{Process.pid}" rescue "pid:#{Process.pid}"
+    self.min_priority = nil
+    self.max_priority = nil
+  
 
-    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL'
-    NextTaskOrder       = 'priority DESC, run_at ASC'
+    # By default failed jobs are destroyed after too many attempts.
+    # If you want to keep them around (perhaps to inspect the reason
+    # for the failure), set this to false.
+    self.destroy_failed_jobs = true
 
+    NextTaskSQL  = '(`locked_by` = ? AND `run_at` <= ?) OR (`run_at` <= ? AND (`locked_at` IS NULL OR `locked_at` < ?))'
+    NextTaskOrder = 'priority DESC, run_at ASC'
     ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
     
     cattr_accessor :min_priority, :max_priority
@@ -36,6 +37,11 @@ module Delayed
     def self.clear_locks!
       update_all("locked_by = null, locked_at = null", ["locked_by = ?", worker_name])
     end
+
+    def failed?
+      failed_at
+    end
+    alias_method :failed, :failed?
 
     def failed?
       failed_at
@@ -59,6 +65,7 @@ module Delayed
 
     def payload_object=(object)
       self['handler'] = object.to_yaml
+      self['description'] = object.respond_to?(:description) ? object.description : ''
     end
 
     def reschedule(message, backtrace = [], time = nil)
@@ -83,14 +90,20 @@ module Delayed
 
       Job.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
     end
-
+    
+    #This provides a method of "scheduling"
+    #start_time is when the job will first run, the period dictates when it will run again after that
+    def self.recurring(object, priority = 0, start_time = db_time_now, period = 24.hours)
+      unless object.respond_to?(:perform)
+        raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
+      end
+      Job.create(:payload_object => object, :priority => priority.to_i, :run_at => start_time, :recur => true, :period => period)    
+    end
+     
     def self.find_available(limit = 5, max_run_time = MAX_RUN_TIME)
-      
-      time_now = db_time_now          
-      
+      time_now = db_time_now      
       sql = NextTaskSQL.dup
-
-      conditions = [time_now, time_now - max_run_time, worker_name]
+      conditions = [time_now, time_now, time_now, worker_name]
       
       if self.min_priority
         sql << ' AND (priority >= ?)'
@@ -110,10 +123,18 @@ module Delayed
       
       records.sort { rand() }
     end                                    
+<<<<<<< HEAD:lib/delayed/job.rb
       
     # Get the payload of the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
     def self.reserve(max_run_time = MAX_RUN_TIME, &block)
+=======
+        
+
+    # Get the payload of the next job we can get an exclusive lock on.
+    # If no jobs are left we return nil
+    def self.reserve(max_run_time = MAX_RUN_TIME)
+>>>>>>> e2b724d615185358b9e3a1fb10c291c993dba748:lib/delayed/job.rb
 
       # We get up to 5 jobs from the db. In face we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
@@ -123,7 +144,14 @@ module Delayed
           job.lock_exclusively!(max_run_time, worker_name)
           runtime =  Benchmark.realtime do
             invoke_job(job.payload_object, &block)
-            job.destroy
+            if job.recur == true
+              run = job.run_at + job.period
+              job.update_attributes(:run_at => run)
+              job.unlock
+              job.save
+            else
+              job.destroy
+            end
           end
           logger.info "* [JOB] #{job.name} completed after %.4f" % runtime
 
@@ -177,6 +205,7 @@ module Delayed
 
         job = self.reserve do |j|
           begin
+            logger.info "job: #{j.description}" if j.description
             j.perform
             success += 1
           rescue

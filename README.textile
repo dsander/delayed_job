@@ -1,6 +1,6 @@
 h1. Delayed::Job
 
-Delated_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. 
+Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. 
 
 It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks. Amongst those tasks are:
 
@@ -32,6 +32,9 @@ The library evolves around a delayed_jobs table which looks as follows:
     table.datetime :locked_at
     table.datetime :failed_at
     table.string   :locked_by
+    table.string   :description
+    table.boolean  "recur",    :default => false
+    table.integer  "period",   :limit => 11    
     table.timestamps
   end
   
@@ -40,19 +43,22 @@ h2. Usage
 Jobs are simple ruby objects with a method called perform. Any object which responds to perform can be stuffed into the jobs table.
 Job objects are serialized to yaml so that they can later be resurrected by the job runner. 
 
-  class NewsletterJob < Struct.new(:text, :emails)
+  class NewsletterJob < Struct.new(:description)
     def perform
-      emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+      puts "Hello World!" #Code here
     end    
   end  
   
-  Delayed::Job.enqueue NewsletterJob.new('lorem ipsum...', Customers.find(:all).collect(&:email))
+  Delayed::Job.enqueue NewsletterJob.new("Here is the description.")
            
 There is also a second way to get jobs in the queue: send_later. 
 
   
-  BatchImporter.new(Shop.find(1)).send_later(:import_massive_csv, massive_csv)                                                    
+  BatchImporter.new(Shop.find(1)).send_later(:import_massive_csv, description, massive_csv)                                                    
+
+And another way: recur_later.  This schedules a recurring job to start at time and repeat every period.  
   
+  BatchImporter.new(Shop.find(1)).recur_later(:import_massive_csv, description, time, period, priority, massive_csv)
 
 This will simply create a Delayed::PerformableMethod job in the jobs table which serializes all the parameters you pass to it. There are some special smarts for active record objects
 which are stored as their text representation and loaded from the database fresh when the job is actually run later.
