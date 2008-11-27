@@ -123,19 +123,10 @@ module Delayed
       
       records.sort { rand() }
     end                                    
-<<<<<<< HEAD:lib/delayed/job.rb
       
     # Get the payload of the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
     def self.reserve(max_run_time = MAX_RUN_TIME, &block)
-=======
-        
-
-    # Get the payload of the next job we can get an exclusive lock on.
-    # If no jobs are left we return nil
-    def self.reserve(max_run_time = MAX_RUN_TIME)
->>>>>>> e2b724d615185358b9e3a1fb10c291c993dba748:lib/delayed/job.rb
-
       # We get up to 5 jobs from the db. In face we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
       find_available(5, max_run_time).each do |job|
