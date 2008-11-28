@@ -70,7 +70,8 @@ describe Delayed::Job do
     SimpleJob.runs.should == 1
   end
 
-  it "should work with jobs in modules" do
+  
+it "should work with jobs in modules" do
     M::ModuleJob.runs.should == 0
 
     Delayed::Job.enqueue M::ModuleJob.new
@@ -230,10 +231,8 @@ describe Delayed::Job do
     before(:each) do
       Delayed::Job.max_priority = nil
       Delayed::Job.min_priority = nil      
-
     end
 
-  
     it "should only work_off jobs that are >= min_priority" do
       Delayed::Job.min_priority = -5
       Delayed::Job.max_priority = 5

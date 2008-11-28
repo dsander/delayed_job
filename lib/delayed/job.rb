@@ -9,22 +9,20 @@ module Delayed
     MAX_RUN_TIME = 4.hours
     set_table_name :delayed_jobs
 
+    # By default failed jobs are destroyed after too many attempts.
+    # If you want to keep them around (perhaps to inspect the reason
+    # for the failure), set this to false.
     cattr_accessor :worker_name, :min_priority, :max_priority, :destroy_failed_jobs
+    self.destroy_failed_jobs = true
+
     # Every worker has a unique name which by default is the pid of the process. 
     # There are some advantages to overriding this with something which survives worker retarts: 
     # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.
     self.worker_name = "host:#{Socket.gethostname} pid:#{Process.pid}" rescue "pid:#{Process.pid}"
-    self.min_priority = nil
-    self.max_priority = nil
   
-
-    # By default failed jobs are destroyed after too many attempts.
-    # If you want to keep them around (perhaps to inspect the reason
-    # for the failure), set this to false.
-    self.destroy_failed_jobs = true
-
-    NextTaskSQL  = '(`locked_by` = ? AND `run_at` <= ?) OR (`run_at` <= ? AND (`locked_at` IS NULL OR `locked_at` < ?))'
+    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL'
     NextTaskOrder = 'priority DESC, run_at ASC'
+
     ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
     
     cattr_accessor :min_priority, :max_priority
@@ -37,11 +35,6 @@ module Delayed
     def self.clear_locks!
       update_all("locked_by = null, locked_at = null", ["locked_by = ?", worker_name])
     end
-
-    def failed?
-      failed_at
-    end
-    alias_method :failed, :failed?
 
     def failed?
       failed_at
@@ -101,9 +94,12 @@ module Delayed
     end
      
     def self.find_available(limit = 5, max_run_time = MAX_RUN_TIME)
+
       time_now = db_time_now      
+
       sql = NextTaskSQL.dup
-      conditions = [time_now, time_now, time_now, worker_name]
+
+      conditions = [time_now, time_now - max_run_time, worker_name]
       
       if self.min_priority
         sql << ' AND (priority >= ?)'
@@ -127,6 +123,7 @@ module Delayed
     # Get the payload of the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
     def self.reserve(max_run_time = MAX_RUN_TIME, &block)
+
       # We get up to 5 jobs from the db. In face we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
       find_available(5, max_run_time).each do |job|
@@ -196,7 +193,7 @@ module Delayed
 
         job = self.reserve do |j|
           begin
-            logger.info "job: #{j.description}" if j.description
+            logger.info "job: #{j.description}" if j.respond_to?(:description) && j.description
             j.perform
             success += 1
           rescue

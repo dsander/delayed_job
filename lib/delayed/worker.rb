@@ -29,10 +29,7 @@ module Delayed
 
         count = result.sum
 
-        if $exit
-          Delayed::Job.clear_locks!
-          break
-        end
+        break if $exit
 
         if count.zero?
           sleep(SLEEP)
