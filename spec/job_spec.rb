@@ -94,6 +94,17 @@ it "should work with jobs in modules" do
     job.run_at.should < Delayed::Job.db_time_now + 10.minutes
   end
 
+  it "should update run_at when recurring" do
+    Delayed::Job.recurring SimpleJob.new
+
+    rerun = 24.hours.from_now
+
+    job = Delayed::Job.find(:first)
+
+    Delayed::Job.work_off(1)
+    Delayed::Job.first.run_at.should be_close(rerun, 1)
+  end
+
   it "should raise an DeserializationError when the job class is totally unknown" do
 
     job = Delayed::Job.new
