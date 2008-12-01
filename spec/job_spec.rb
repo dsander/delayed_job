@@ -69,9 +69,22 @@ describe Delayed::Job do
 
     SimpleJob.runs.should == 1
   end
+                     
+                     
+  it "should work with eval jobs" do
+    $eval_job_ran = false
 
-  
-it "should work with jobs in modules" do
+    Delayed::Job.enqueue do <<-JOB
+      $eval_job_ran = true
+    JOB
+    end
+
+    Delayed::Job.work_off
+
+    $eval_job_ran.should == true
+  end
+                   
+  it "should work with jobs in modules" do
     M::ModuleJob.runs.should == 0
 
     Delayed::Job.enqueue M::ModuleJob.new
